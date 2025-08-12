@@ -4,8 +4,40 @@ import (
 	"bytes"
 	"errors"
 	docker "github.com/fsouza/go-dockerclient"
+	"fmt"
 	"io"
 )
+
+// Process represents a running process in a Docker container.
+// It provides methods similar to os.Process for container management.
+type Process struct {
+	// ContainerID holds the Docker container ID
+	ContainerID string
+	
+	docker Docker
+}
+
+// Kill terminates the process by stopping the Docker container.
+func (p *Process) Kill() error {
+	return p.Signal(docker.SIGKILL)
+}
+
+// Signal sends a signal to the process in the Docker container.
+// This is similar to os.Process.Signal but sends the signal to the container process.
+func (p *Process) Signal(sig docker.Signal) error {
+	if p.ContainerID == "" {
+		return errors.New("dexec: no container to signal")
+	}
+	
+	err := p.docker.Client.KillContainer(docker.KillContainerOptions{
+		ID:     p.ContainerID,
+		Signal: sig,
+	})
+	if err != nil {
+		return fmt.Errorf("dexec: failed to signal container %s: %v", p.ContainerID, err)
+	}
+	return nil
+}
 
 // Docker contains connection to Docker API.
 // Use github.com/fsouza/go-dockerclient to initialize *docker.Client.
@@ -60,6 +92,9 @@ type Cmd struct {
 	Stdout io.Writer
 	Stderr io.Writer
 
+	// Process is the underlying process, once started.
+	Process *Process
+
 	docker         Docker
 	started        bool
 	closeAfterWait []io.Closer
@@ -100,6 +135,13 @@ func (c *Cmd) Start() error {
 	if err := c.Method.run(c.docker, c.Stdin, c.Stdout, c.Stderr); err != nil {
 		return err
 	}
+	
+	// Initialize the Process field after the container is created and started
+	c.Process = &Process{
+		ContainerID: c.Method.containerID(),
+		docker:      c.docker,
+	}
+	
 	return nil
 }
 
