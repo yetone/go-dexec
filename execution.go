@@ -41,7 +41,8 @@ func ByCreatingContainer(opts docker.CreateContainerOptions) (Execution, error) 
 
 func (c *createContainer) setEnv(env []string) error {
 	if len(c.opt.Config.Env) > 0 {
-		return errors.New("dexec: Config.Env already set")
+		c.opt.Config.Env = append(c.opt.Config.Env, env...)
+		return nil
 	}
 	c.opt.Config.Env = env
 	return nil
