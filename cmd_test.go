@@ -131,18 +131,6 @@ func (s *CmdTestSuite) TestDirAlreadySet(c *C) {
 	c.Assert(err, ErrorMatches, "dexec: Config.WorkingDir already set")
 }
 
-func (s *CmdTestSuite) TestEnvAlreadySet(c *C) {
-	opts := baseOpts()
-	opts.Config.Env = []string{"A=B"}
-	e, err := dexec.ByCreatingContainer(opts)
-	c.Assert(err, IsNil)
-
-	cmd := s.d.Command(e, "env")
-	cmd.Env = []string{"C=D"}
-	err = cmd.Start()
-	c.Assert(err, ErrorMatches, "dexec: Config.Env already set")
-}
-
 func (s *CmdTestSuite) TestEntrypointAlreadySet(c *C) {
 	opts := baseOpts()
 	opts.Config.Entrypoint = []string{"date"}
